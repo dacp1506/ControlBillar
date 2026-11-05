@@ -1,0 +1,17 @@
+{
+  "name": "billar-saas",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=@billar/web",
+    "dev:desktop": "npm run dev --workspace=@billar/desktop",
+    "dev:superadmin": "npm run dev --workspace=@billar/superadmin",
+    "build": "npm run build --workspaces --if-present",
+    "db:types": "supabase gen types typescript --local > packages/database/src/database.types.ts"
+  }
+}
