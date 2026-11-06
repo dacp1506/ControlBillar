@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import OwnerDashboard from './OwnerDashboard.jsx';
+import RegisterModal from './components/auth/RegisterModal.jsx';
 import { supabase } from './lib/supabase.js';
 
 const { VITE_PUBLIC_BILLAR_SLUG } = import.meta.env;
@@ -12,6 +13,7 @@ function App() {
   const [loginMessage, setLoginMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [ownerUser, setOwnerUser] = useState(null);
+  const [registerOpen, setRegisterOpen] = useState(false);
 
   useEffect(() => {
     if (!supabase || !VITE_PUBLIC_BILLAR_SLUG) return undefined;
@@ -48,7 +50,8 @@ function App() {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) setLoginMessage('No se pudo iniciar sesión. Revisa tus credenciales.');
-    else setOwnerUser(data.user);
+    else if (data.session && data.user) setOwnerUser(data.user);
+    else setLoginMessage('Revisa tu correo y confirma la cuenta antes de iniciar sesión.');
   }
 
   if (ownerUser) {
@@ -60,6 +63,7 @@ function App() {
       <header className="topbar">
         <a className="brand" href="#inicio"><span className="brand-mark">8</span><span>CUADRO<span className="brand-light">CLUB</span></span></a>
         <nav><a href="#disponibilidad">Disponibilidad</a><a href="#negocios">Acceso negocios</a></nav>
+        <button type="button" className="border border-[#637168] px-3 py-2 text-xs font-bold text-[#f0f3ef] transition hover:border-[#c0ed5d] hover:text-[#c0ed5d]" onClick={() => setRegisterOpen(true)}>Crear cuenta</button>
         <a className="download-link" href="#descarga">App para PC <span aria-hidden="true">↗</span></a>
       </header>
 
@@ -107,6 +111,7 @@ function App() {
       </section>
 
       <footer id="descarga"><span>CUADROCLUB</span><span>Aplicación de gestión para Windows próximamente</span></footer>
+      <RegisterModal isOpen={registerOpen} onClose={() => setRegisterOpen(false)} />
     </main>
   );
 }
