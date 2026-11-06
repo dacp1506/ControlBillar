@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react';
 import OwnerDashboard from './OwnerDashboard.jsx';
 import RegisterModal from './components/auth/RegisterModal.jsx';
+import QrOrderingPortal from './QrOrderingPortal.jsx';
 import { supabase } from './lib/supabase.js';
 
 const { VITE_PUBLIC_BILLAR_SLUG } = import.meta.env;
+
+function localDateTime(hoursFromNow) {
+  const date = new Date(Date.now() + hoursFromNow * 60 * 60 * 1000);
+  date.setMinutes(Math.ceil(date.getMinutes() / 30) * 30, 0, 0);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
 
 function App() {
   const [availability, setAvailability] = useState([]);
@@ -14,6 +22,14 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [ownerUser, setOwnerUser] = useState(null);
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [reservationTable, setReservationTable] = useState(null);
+  const [reservationMessage, setReservationMessage] = useState('');
+  const [reservationBusy, setReservationBusy] = useState(false);
+  const [reservationStart, setReservationStart] = useState(() => localDateTime(1));
+  const [reservationEnd, setReservationEnd] = useState(() => localDateTime(2));
+  const [reservationName, setReservationName] = useState('');
+  const [reservationEmail, setReservationEmail] = useState('');
+  const qrToken = new URLSearchParams(window.location.search).get('mesa');
 
   useEffect(() => {
     if (!supabase || !VITE_PUBLIC_BILLAR_SLUG) return undefined;
@@ -54,6 +70,34 @@ function App() {
     else setLoginMessage('Revisa tu correo y confirma la cuenta antes de iniciar sesión.');
   }
 
+  async function submitReservation(event) {
+    event.preventDefault();
+    if (!supabase || !reservationTable || !VITE_PUBLIC_BILLAR_SLUG) {
+      setReservationMessage('No se pudo determinar el negocio o la mesa.');
+      return;
+    }
+    setReservationBusy(true);
+    setReservationMessage('');
+    const { error } = await supabase.rpc('crear_reserva_publica', {
+      p_slug: VITE_PUBLIC_BILLAR_SLUG,
+      p_mesa: reservationTable.mesa_id,
+      p_inicio: new Date(reservationStart).toISOString(),
+      p_fin: new Date(reservationEnd).toISOString(),
+      p_nombre: reservationName.trim(),
+      p_email: reservationEmail.trim(),
+    });
+    setReservationBusy(false);
+    if (error) setReservationMessage(error.message || 'No se pudo solicitar la reserva. Verifica el horario.');
+    else {
+      setReservationMessage('Reserva solicitada. El local la revisará y se pondrá en contacto contigo.');
+      setReservationTable(null);
+      setReservationName('');
+      setReservationEmail('');
+      setAvailability((current) => current.map((item) => item.mesa_id === reservationTable.mesa_id ? { ...item, disponible: false } : item));
+    }
+  }
+
+  if (qrToken) return <QrOrderingPortal token={qrToken} />;
   if (ownerUser) {
     return <OwnerDashboard user={ownerUser} onSignOut={() => { setOwnerUser(null); setLoginMessage('Sesión cerrada.'); }} />;
   }
@@ -94,10 +138,24 @@ function App() {
               <span className={item.disponible ? 'status available' : 'status busy'}>
                 {item.disponible ? 'Disponible' : 'Ocupada o reservada'}
               </span>
+              {item.disponible && <button type="button" className="reservation-button" onClick={() => {
+                setReservationTable(item);
+                setReservationMessage('');
+              }}>Solicitar reserva</button>}
             </article>
           ))}
           {availability.length === 0 && <div className="empty-state">La disponibilidad de los locales se mostrará aquí.</div>}
         </div>
+        {reservationTable && <form className="reservation-form" onSubmit={submitReservation}>
+          <div><p className="eyebrow">SOLICITUD DE RESERVA</p><h3>{reservationTable.mesa} · {reservationTable.sucursal}</h3></div>
+          <label>Nombre<input required minLength="2" maxLength="120" value={reservationName} onChange={(event) => setReservationName(event.target.value)} /></label>
+          <label>Correo electrónico<input type="email" required maxLength="254" value={reservationEmail} onChange={(event) => setReservationEmail(event.target.value)} /></label>
+          <label>Desde<input type="datetime-local" required value={reservationStart} onChange={(event) => setReservationStart(event.target.value)} /></label>
+          <label>Hasta<input type="datetime-local" required value={reservationEnd} onChange={(event) => setReservationEnd(event.target.value)} /></label>
+          <div className="reservation-actions"><button type="button" className="cancel-reservation" onClick={() => setReservationTable(null)}>Cancelar</button><button type="submit" disabled={reservationBusy}>{reservationBusy ? 'Enviando…' : 'Enviar solicitud'}</button></div>
+          {reservationMessage && <p role="status">{reservationMessage}</p>}
+        </form>}
+        {!reservationTable && reservationMessage && <p className="section-note" role="status">{reservationMessage}</p>}
       </section>
 
       <section className="business section" id="negocios">

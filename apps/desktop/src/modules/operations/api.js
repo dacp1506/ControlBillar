@@ -14,7 +14,7 @@ export async function loadBranchSnapshot(branchId) {
       ...table,
       id: table.mesa_id,
       nombre: table.mesa_nombre,
-      session: table.hora_inicio ? { hora_inicio: table.hora_inicio } : null,
+      session: table.hora_inicio ? { id: table.sesion_id, hora_inicio: table.hora_inicio } : null,
     })),
     serverTime: data?.[0]?.hora_servidor ?? null,
     salesToday: data?.[0]?.ventas_hoy ?? 0,
@@ -32,6 +32,27 @@ export function subscribeBranch(branchId, onChange, onError = () => {}) {
     }, onChange)
     .on('postgres_changes', {
       event: '*', schema: 'public', table: 'venta', filter: `id_sucursal=eq.${branchId}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'producto', filter: `id_sucursal=eq.${branchId}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'reservations', filter: `id_sucursal=eq.${branchId}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'cash_shifts', filter: `branch_id=eq.${branchId}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'cash_movements', filter: `branch_id=eq.${branchId}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'inventory_movements', filter: `branch_id=eq.${branchId}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'qr_orders', filter: `branch_id=eq.${branchId}`,
+    }, onChange)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'staff_tasks', filter: `branch_id=eq.${branchId}`,
     }, onChange)
     .subscribe((status) => {
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') onError(status);
@@ -69,4 +90,15 @@ export async function paySale(saleId, method) {
   });
   if (error) throw error;
   return data;
+}
+
+export async function loadSaleLines(saleId) {
+  const { data, error } = await requireClient().from('detalle_venta')
+    .select('descripcion,cantidad,total').eq('venta_id', saleId).order('created_at');
+  if (error) throw error;
+  return (data ?? []).map((line) => ({
+    description: line.descripcion,
+    quantity: Number(line.cantidad),
+    total: Number(line.total),
+  }));
 }
