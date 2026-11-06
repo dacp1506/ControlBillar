@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase.js';
 
 const tenantId = import.meta.env.VITE_TENANT_ID;
 
-function LoginForm() {
+function LoginForm({ onOpenDemo }) {
   const { signInWithPassword, signOut } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -82,6 +82,25 @@ function LoginForm() {
         >
           {loading ? 'Ingresando…' : 'Iniciar sesión'}
         </button>
+        {onOpenDemo && (
+          <>
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-slate-600">
+              <span className="h-px flex-1 bg-slate-800" />
+              o
+              <span className="h-px flex-1 bg-slate-800" />
+            </div>
+            <button
+              type="button"
+              onClick={onOpenDemo}
+              className="border border-slate-700 px-4 py-3 text-sm font-bold text-slate-300 transition hover:border-emerald-400 hover:text-emerald-300"
+            >
+              Ver demo sin iniciar sesión
+            </button>
+            <p className="text-center text-[11px] leading-5 text-slate-500">
+              Explora las mesas, el POS y el portal cliente con datos de ejemplo.
+            </p>
+          </>
+        )}
       </form>
     </main>
   );

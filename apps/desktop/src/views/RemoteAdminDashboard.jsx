@@ -21,7 +21,7 @@ function formatDuration(seconds) {
   return [hours, minutes, remainder].map((value) => String(value).padStart(2, '0')).join(':');
 }
 
-function RemoteAdminDashboard() {
+function RemoteAdminDashboard({ onOpenDemo }) {
   const { user, session, loading: authLoading, signOut } = useAuth();
   const [tables, setTables] = useState([]);
   const [products, setProducts] = useState([]);
@@ -138,7 +138,7 @@ function RemoteAdminDashboard() {
 
   if (authLoading) return <main className="grid min-h-screen place-items-center bg-slate-950 text-sm text-slate-300">Cargando sesión…</main>;
   if (!supabase || !branchId) return <main className="grid min-h-screen place-items-center bg-slate-950 px-4 text-sm text-amber-200">Configura Supabase y VITE_BRANCH_ID.</main>;
-  if (!session || !user) return <LoginForm />;
+  if (!session || !user) return <LoginForm onOpenDemo={onOpenDemo} />;
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 text-slate-100 sm:px-6 lg:px-8">
